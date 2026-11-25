@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Quick Note App</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        header {
+            background: #4f46e5;
+            color: white;
+            text-align: center;
+            padding: 25px;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .note-form {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+        }
+
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            margin-top: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #3730a3;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        h2 {
+            margin-top: 30px;
+        }
+
+        .note-card {
+            background: white;
+            padding: 18px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #4f46e5;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .note-card p {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .note-card small {
+            color: #777;
+        }
+
+        .empty {
+            color: #777;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>📝 Quick Note App</h1>
+        <p>Write your thoughts and save them!</p>
+    </header>
+
+    <div class="container">
+
+        <div class="note-form">
+
+            <textarea id="noteInput"
+                placeholder="Write your note here..."></textarea>
+
+            <button id="saveBtn" onclick="saveNote()">
+                Save Note
+            </button>
+
+            <p id="message"></p>
+
+        </div>
+
+        <h2>My Saved Notes</h2>
+
+        <div id="notesContainer"></div>
+
+    </div>
+
+    <script>
+
+        async function loadNotes() {
+
+            const container =
+                document.getElementById("notesContainer");
+
+            try {
+
+                const response = await fetch("/api/notes");
+                const notes = await response.json();
+
+                container.innerHTML = "";
+
+                if (notes.length === 0) {
+
+                    container.innerHTML =
+                        '<p class="empty">No notes yet. Create your first note!</p>';
+
+                    return;
+                }
+
+                notes.forEach(note => {
+
+                    const card = document.createElement("div");
+                    card.className = "note-card";
+
+                    const content = document.createElement("p");
+                    content.textContent = note.content;
+
+                    const date = document.createElement("small");
+                    date.textContent = "Created: " + note.created_at;
+
+                    card.appendChild(content);
+                    card.appendChild(date);
+
+                    container.appendChild(card);
+
+                });
+
+            } catch (error) {
+
+                container.innerHTML =
+                    '<p class="empty">Unable to load notes.</p>';
+
+            }
+
+        }
+
+
+        async function saveNote() {
+
+            const input =
+                document.getElementById("noteInput");
+
+            const message =
+                document.getElementById("message");
+
+            const button =
+                document.getElementById("saveBtn");
+
+            const content = input.value.trim();
+
+            if (content === "") {
+
+                message.textContent =
+                    "Please write something first!";
+
+                message.style.color = "red";
+
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = "Saving...";
+
+            try {
+
+                const response = await fetch("/api/notes", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        content: content
+                    })
+
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error);
+                }
+
+                input.value = "";
+
+                message.textContent =
+                    "Note saved successfully!";
+
+                message.style.color = "green";
+
+                await loadNotes();
+
+            } catch (error) {
+
+                message.textContent = error.message;
+                message.style.color = "red";
+
+            } finally {
+
+                button.disabled = false;
+                button.textContent = "Save Note";
+
+            }
+
+        }
+
+        loadNotes();
+
+    </script>
+
+</body>
+</html>
